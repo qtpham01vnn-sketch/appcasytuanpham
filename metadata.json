@@ -1,0 +1,5 @@
+{
+  "name": "App tạo ảnh Ca sĩ Tuấn Phạm",
+  "description": "Ứng dụng AI tạo ảnh ca sĩ chuyên nghiệp từ ảnh chân dung của bạn.",
+  "requestFramePermissions": ["camera"]
+}
