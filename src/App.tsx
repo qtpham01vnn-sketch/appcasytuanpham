@@ -57,6 +57,7 @@ export default function TuanPhamAIApp() {
   const [faceSimilarity, setFaceSimilarity] = useState(95);
   const [errorMsg, setErrorMsg] = useState('');
   const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<{title: string, content: string}[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,6 +103,47 @@ export default function TuanPhamAIApp() {
     } catch (err) {
       console.error(err);
       setErrorMsg("AI đang bận một chút, anh thử lại nhé!");
+    } finally {
+      setIsAiSuggesting(false);
+    }
+  };
+
+  /**
+   * Hàm AI Phân tích & Gợi ý 3 kịch bản tối ưu
+   */
+  const handleAdvancedAiSuggest = async () => {
+    if (!uploadedImage) {
+      setErrorMsg("Anh Tuấn ơi, tải ảnh lên để em phân tích dáng người và trang phục nhé!");
+      return;
+    }
+    setIsAiSuggesting(true);
+    setErrorMsg('');
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) throw new Error("API Key missing");
+      
+      const ai = new GoogleGenAI({ apiKey });
+
+      const prompt = `
+        Dựa trên Phong cách: ${selectedStyle} và Bối cảnh: ${selectedContext}.
+        Hãy đóng vai Đạo diễn hình ảnh, gợi ý 3 kịch bản chụp ảnh khác nhau.
+        Mỗi kịch bản phải tối ưu cho "Dáng ca sĩ": Slim fit, elegant posture, professional lighting.
+        Yêu cầu trả về định dạng JSON: [{"title": "Tên kịch bản", "content": "Mô tả chi tiết prompt"}]
+      `;
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+      
+      const text = response.text || '[]';
+      setAiSuggestions(JSON.parse(text));
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("AI đang bận nghĩ kịch bản, anh bấm lại nhé!");
     } finally {
       setIsAiSuggesting(false);
     }
@@ -283,6 +325,44 @@ export default function TuanPhamAIApp() {
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                   </div>
+                </div>
+              </div>
+
+              {/* Giao diện hiển thị các thẻ gợi ý */}
+              <div className="space-y-3 mt-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">AI Gợi ý kịch bản chuyên nghiệp</label>
+                  <button 
+                    onClick={handleAdvancedAiSuggest} 
+                    disabled={isAiSuggesting || !uploadedImage}
+                    className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {isAiSuggesting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} 
+                    LÀM MỚI GỢI Ý
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {aiSuggestions.map((sug, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setDescription(sug.content)}
+                      className="text-left p-3 rounded-xl border border-indigo-100 bg-indigo-50/30 hover:bg-indigo-100/50 hover:border-indigo-300 transition-all group"
+                    >
+                      <div className="text-[11px] font-black text-indigo-600 mb-1 flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[8px]">{idx + 1}</div>
+                        {sug.title}
+                      </div>
+                      <div className="text-[10px] text-slate-500 line-clamp-2 group-hover:line-clamp-none italic">
+                        {sug.content}
+                      </div>
+                    </button>
+                  ))}
+                  {aiSuggestions.length === 0 && !isAiSuggesting && uploadedImage && (
+                    <div className="text-center p-4 border border-dashed border-slate-200 rounded-xl">
+                      <p className="text-[10px] text-slate-400 font-bold">Bấm "LÀM MỚI GỢI Ý" để AI thiết kế kịch bản cho anh nhé!</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
